@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tâm Quỳnh's Garden</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:'Trebuchet MS',sans-serif;
+  overflow-x:hidden;
+  background:linear-gradient(#cfefff 0%, #eaf8ff 35%, #bde7a6 35%, #8fd37a 100%);
+}
+
+/* TITLE */
+h1{
+  text-align:center;
+  margin-top:25px;
+  color:#ff5fa2;
+  text-shadow:2px 2px white, 4px 4px #f2c5da;
+}
+
+/* FIELD */
+.field{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(70px,1fr));
+  gap:16px;
+  padding:40px;
+}
+
+/* FLOWER */
+.flower{
+  width:70px;
+  height:90px;
+  margin:auto;
+  position:relative;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  cursor:pointer;
+  transition:.3s;
+}
+
+.flower:hover{transform:scale(1.25)}
+
+.flower-icon{
+  font-size:42px;
+  animation:sway 3s ease-in-out infinite;
+}
+
+@keyframes sway{
+  0%,100%{transform:rotate(-4deg)}
+  50%{transform:rotate(4deg)}
+}
+
+/* sparkle */
+.flower:not(.locked)::after{
+  content:"✨";
+  position:absolute;
+  top:-5px;
+  right:0;
+  animation:sparkle 2s infinite;
+}
+
+@keyframes sparkle{
+  0%,100%{opacity:0;transform:scale(.5)}
+  50%{opacity:1;transform:scale(1)}
+}
+
+/* locked flower */
+.locked{opacity:.85}
+
+.nameTag{
+  position:absolute;
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:10px;
+  background:white;
+  padding:3px 7px;
+  border-radius:10px;
+  white-space:nowrap;
+}
+
+.done{
+  position:absolute;
+  top:0;
+  right:0;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  background:#58c472;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:12px;
+}
+
+/* CLOUDS */
+.cloud{
+  position:fixed;
+  font-size:60px;
+  pointer-events:none;
+  opacity:.8;
+}
+
+.c1{top:5%;animation:cloud 40s linear infinite}
+.c2{top:15%;animation:cloud 55s linear infinite}
+.c3{top:25%;animation:cloud 50s linear infinite}
+
+@keyframes cloud{
+  from{left:-20%}
+  to{left:120%}
+}
+
+/* BUTTERFLY */
+.butterfly{
+  position:fixed;
+  font-size:30px;
+  pointer-events:none;
+}
+
+.b1{animation:fly1 20s linear infinite}
+.b2{animation:fly2 22s linear infinite}
+.b3{animation:fly3 18s linear infinite}
+
+@keyframes fly1{
+  from{left:-10%;top:20%}
+  to{left:110%;top:35%}
+}
+
+@keyframes fly2{
+  from{left:110%;top:50%}
+  to{left:-10%;top:25%}
+}
+
+@keyframes fly3{
+  from{left:-10%;top:70%}
+  to{left:110%;top:55%}
+}
+
+/* MODAL */
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.4);
+  justify-content:center;
+  align-items:center;
+}
+
+.card{
+  background:white;
+  width:320px;
+  padding:20px;
+  border-radius:20px;
+}
+
+.card input,.card textarea{
+  width:100%;
+  margin-bottom:10px;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #ddd;
+}
+
+.card button{
+  background:#ff7fb3;
+  border:none;
+  padding:10px 15px;
+  color:white;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+/* MUSIC BUTTON */
+#playBtn{
+  position:fixed;
+  top:20px;
+  right:20px;
+  z-index:9999;
+  padding:10px 15px;
+  border:none;
+  border-radius:10px;
+  background:#ff7fb3;
+  color:white;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🌸 Tâm Quỳnh's Garden 🌸</h1>
+
+<!-- clouds -->
+<div class="cloud c1">☁️</div>
+<div class="cloud c2">☁️</div>
+<div class="cloud c3">☁️</div>
+
+<!-- butterflies -->
+<div class="butterfly b1">🦋</div>
+<div class="butterfly b2">🦋</div>
+<div class="butterfly b3">🦋</div>
+
+<!-- MUSIC (ONLY ONE) -->
+<audio id="bgMusic" loop>
+  <source src="toasang.mp3" type="audio/mpeg">
+</audio>
+
+<button id="playBtn">▶ Play nhạc</button>
+
+<!-- FIELD -->
+<div class="field" id="field"></div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="card">
+    <h3>💌 Viết lưu bút</h3>
+    <input id="name" placeholder="Tên bạn">
+    <textarea id="message" rows="4" placeholder="Lời nhắn"></textarea>
+    <button onclick="saveFlower()">Gửi 🌸</button>
+  </div>
+</div>
+
+<script>
+const flowers = ["🌸","🌼","🌷","🌻","🌺","🌹","🪻","💐","🏵️"];
+
+const field = document.getElementById("field");
+const modal = document.getElementById("modal");
+
+let data = new Array(200).fill(null);
+let current = null;
+
+/* CREATE FLOWERS */
+for(let i=0;i<200;i++){
+  const f = document.createElement("div");
+  f.className = "flower";
+
+  const icon = flowers[Math.floor(Math.random()*flowers.length)];
+
+  f.innerHTML = `<div class="flower-icon">${icon}</div>`;
+
+  f.onclick = () => {
+    if(data[i]) return;
+    current = {i,icon,el:f};
+    modal.style.display="flex";
+  };
+
+  field.appendChild(f);
+}
+
+/* SAVE MESSAGE */
+function saveFlower(){
+  const name = document.getElementById("name").value;
+  const msg = document.getElementById("message").value;
+  if(!name || !current) return;
+
+  data[current.i] = {name,msg};
+
+  current.el.classList.add("locked");
+
+  current.el.innerHTML = `
+    <div class="flower-icon">${current.icon}</div>
+    <div class="nameTag">${name}</div>
+    <div class="done">✓</div>
+  `;
+
+  modal.style.display="none";
+  document.getElementById("name").value="";
+  document.getElementById("message").value="";
+}
+
+/* CLOSE MODAL */
+modal.onclick = e=>{
+  if(e.target===modal) modal.style.display="none";
+}
+
+/* MUSIC */
+const music = document.getElementById("bgMusic");
+const btn = document.getElementById("playBtn");
+
+btn.onclick = () => {
+  if(music.paused){
+    music.play();
+    btn.innerText="⏸ Pause nhạc";
+  }else{
+    music.pause();
+    btn.innerText="▶ Play nhạc";
+  }
+};
+</script>
+
+</body>
+</html>
